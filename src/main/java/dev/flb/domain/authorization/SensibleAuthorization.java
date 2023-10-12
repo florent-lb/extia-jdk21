@@ -1,5 +1,7 @@
 package dev.flb.domain.authorization;
 
+import java.util.List;
+
 public record SensibleAuthorization(Level level) implements Authorization {
 
     public SensibleAuthorization {

@@ -1,29 +1,32 @@
 package dev.flb.domain.people;
 
+import dev.flb.domain.authorization.Authorization;
+import dev.flb.domain.authorization.Person;
+import lombok.Getter;
+
+import java.util.List;
 import java.util.UUID;
 
 import static java.lang.StringTemplate.RAW;
 
-public sealed class Employee permits Customer, NextGenEmployee, OldEmployee {
+public sealed class Employee extends Person permits NextGenEmployee, OldEmployee {
 
-    final public Identity identity;
-
+    @Getter
+    private final Authorization authorization;
+    @Getter
     final protected Object id;
 
-    public Employee(Identity identity, Object id) {
-        this.identity = identity;
+    public Employee(Identity identity, Authorization authorization, Object id) {
+        super(identity);
+        this.authorization = authorization;
         this.id = id;
     }
-
-
     String returnLogin() {
 
         String suffix = "";
         var template = RAW. "\{ suffix }_\{ id }" ;
         switch (id) {
-            case UUID uuid ->  {
-                template = RAW. "NEW_\{ id }" ;
-            }
+            case UUID uuid -> template = RAW. "NEW_\{ id }" ;
             case Long oldId when oldId >= 2000 -> suffix = "MID";
             case Long oldId when oldId < 2000 -> suffix = "OLD";
             //Primitive are not allowed  case long oldId -> Long.toString(oldId);

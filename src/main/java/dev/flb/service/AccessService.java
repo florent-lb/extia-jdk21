@@ -6,6 +6,7 @@ import dev.flb.domain.building.Floor;
 import dev.flb.domain.people.Customer;
 import dev.flb.domain.people.NextGenEmployee;
 import dev.flb.domain.people.Employee;
+import dev.flb.domain.people.OldEmployee;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.security.SecureRandom;
@@ -18,10 +19,30 @@ import java.util.stream.IntStream;
 public class AccessService {
 
     /*
+       Java 21 Without Switch but Record pattern
+        */
+    boolean performAccess21WithoutSwitch(Person person, Floor floor) {
+
+        if (person instanceof Customer customer) {
+            throw new FloorAccessRestrictedException(person, floor);
+        } else if (person instanceof NextGenEmployee nextGenEmployee) {
+            if (nextGenEmployee.getAuthorization() instanceof StandardAuthorization(_, Level level)) {
+                return checkStandardAuthorization(level, nextGenEmployee);
+            } else if (nextGenEmployee.getAuthorization() instanceof SensibleAuthorization(Level sensibleLevel)) {
+                return checkSensibleAuthorization(sensibleLevel, nextGenEmployee);
+            } else if (nextGenEmployee.getAuthorization() instanceof FloorAuthorization(_, DepartmentName name)) {
+                return name.compareTo(floor.departmentName()) == 0;
+            }
+        }
+        return false;
+    }
+    /*
     JAVA 21 Style Record pattern with switch
+    JEP 440
      */
-    boolean performAccess21(Employee employee, Floor floor) {
-        return switch (employee) {
+
+    boolean performAccess21(Person person, Floor floor) {
+        return switch (person) {
             case Customer customer -> throw new FloorAccessRestrictedException(customer, floor);
             case NextGenEmployee nextGenEmployee -> switch (nextGenEmployee.getAuthorization()) {
                 case StandardAuthorization(_, Level level) -> checkStandardAuthorization(level, nextGenEmployee);
@@ -38,19 +59,20 @@ public class AccessService {
         };
     }
 
+
     /*
     JAVA 17 Pattern matching with if only anbd no Record Pattern
      */
-    boolean performAccess17(Employee employee, Floor floor) {
+    boolean performAccess17(Person person, Floor floor) {
 
-        if (employee instanceof Customer customer) {
-            throw new FloorAccessRestrictedException(employee, floor);
-        } else if (employee instanceof NextGenEmployee nextGenEmployee) {
-            if (nextGenEmployee.getAuthorization() instanceof StandardAuthorization standA) {
-                return checkStandardAuthorization(standA.level(), nextGenEmployee);
-            } else if (nextGenEmployee.getAuthorization() instanceof SensibleAuthorization sensA) {
-                return checkSensibleAuthorization(sensA.level(), nextGenEmployee);
-            } else if (nextGenEmployee.getAuthorization() instanceof FloorAuthorization floorA) {
+        if (person instanceof Customer customer) {
+            throw new FloorAccessRestrictedException(customer, floor);
+        } else if (person instanceof Employee employee) {
+            if (employee.getAuthorization() instanceof StandardAuthorization standA) {
+                return checkStandardAuthorization(standA.level(), employee);
+            } else if (employee.getAuthorization() instanceof SensibleAuthorization sensA) {
+                return checkSensibleAuthorization(sensA.level(), employee);
+            } else if (employee.getAuthorization() instanceof FloorAuthorization floorA) {
                 return floorA.name().compareTo(floor.departmentName()) == 0;
             }
         }
@@ -78,13 +100,28 @@ public class AccessService {
     }
 
 
-    private boolean checkSensibleAuthorization(Level sensibleLevel, NextGenEmployee nextGenEmployee) {
+    private boolean checkSensibleAuthorization(Level sensibleLevel, Employee nextGenEmployee) {
         return false;
     }
 
-    private boolean checkStandardAuthorization(Level level, NextGenEmployee nextGenEmployee) {
-        return true;
+
+    public boolean checkStandardAuthorization(Level level, Employee nextGenEmployee) {
+        return switch (nextGenEmployee) {
+            //Not authorize when is available only with pattern matching
+            // case DIAMOND, RUBY  when nextGenEmployee.getDepartmentName() == DepartmentName.ADMIN -> true;
+            case NextGenEmployee newEmployee
+                    when newEmployee.getDepartmentName() == DepartmentName.LEGAL ||
+                         newEmployee.getDepartmentName() == DepartmentName.SALES ||
+                         newEmployee.getDepartmentName() == DepartmentName.CUSTOMER_SERVICE ->
+                    newEmployee.getAuthorization() instanceof StandardAuthorization sta && sta.level() == level;
+
+            case OldEmployee oldEmployee when (long) oldEmployee.getId() > 2000 ->
+                    oldEmployee.getAuthorization() instanceof StandardAuthorization sta && sta.level() == level;
+
+            default -> throw new IllegalArgumentException("Unexpected value: " + nextGenEmployee);
+        };
     }
+
 
 }
 

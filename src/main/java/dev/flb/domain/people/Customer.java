@@ -1,9 +1,11 @@
 package dev.flb.domain.people;
 
-public final class Customer extends Employee {
+import dev.flb.domain.authorization.Person;
+
+public final class Customer extends Person {
 
 
     public Customer(Identity identity) {
-        super(identity,null);
+        super(identity);
     }
 }
